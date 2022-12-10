@@ -1,0 +1,18 @@
+Error:
+Encountered " <ESPACIOS> "                 "" at line 16263, column 10.
+Was expecting:
+    <namH> ...
+
+Este error es debido a que en la linea 16263 del archivo de datos del pacífico se encuentra un Huracan llamado "LI ,"
+Por lo que error proviene que despues del nombre hay un espacio vacio, cuando los demas nombres no es asi.
+
+Error:
+Encountered " <namH> "0,0, "" at line 20560, column 49.
+Was expecting:
+    <FILLCOLUMNS> ...
+
+A pesar que se hizo la respectiva correción del error anterior, se obtuvo error en la linea 20560 del archivo del pacífico debido a que se agregan "0,0, "" en el nombre del huracán, pesar de realizar distintas formas de solucionarlo, no se obtuvo ningun resultado
+
+Obviamente se utilizo el mismo programa del pacifico para ejecutar este, donde si se ejecuta bien, apesar de eso, no se concluyo un buen resultado para este archivo de datos del pacifico, por lo tanto es el archivo que contiene los errores.
+
+También a pesar de no lograr pasar de esta parte se hizo una revisión del archivo de datos del pacifico hurdat2-Pasci.txt se encontro que en la ultima linea 31196 en la linea del identificador de registro, hay un ";", afectando obviamente que no se compile correctamente por los tokens que ya estan establecido en el programa.
