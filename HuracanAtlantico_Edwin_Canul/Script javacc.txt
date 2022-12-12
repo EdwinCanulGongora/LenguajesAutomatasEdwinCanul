@@ -1,3 +1,0 @@
-javacc ParserHurr.jj //generación de los archivos necesarios para los tokens
-javac *.java //Compilación del codigo que indica errores
-java ParserHurr < datosHuracanesAtlantico.txt > datosParseadosAtlantico.csv //ejecución del codigo, asi como su resultado sera almacenado en un csv
