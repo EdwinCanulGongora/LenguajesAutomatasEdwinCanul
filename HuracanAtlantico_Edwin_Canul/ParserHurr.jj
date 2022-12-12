@@ -1,0 +1,287 @@
+PARSER_BEGIN(ParserHurr)
+class ParserHurr{
+	public static void main (String[] args) throws ParseException{
+		try {
+			ParserHurr compilador = new ParserHurr(System.in);
+			compilador.ejecutar();
+			//System.out.println("Se ha compilado con exito");
+		}
+		catch(ParseException e) {
+		    System.out.println("Se encontro errores en el codigo");
+		    System.out.println(e.getMessage());
+			
+		}
+	}
+}
+PARSER_END(ParserHurr)
+
+SKIP: {
+	"\r" | "\t" | "\n" | " "
+}
+// Reglas para la fecha y hora del huracán
+TOKEN : {
+	<DAY: ["0"-"3"] ["0"-"9"]> 
+	| <MONTH:["0"-"1"] ["0"-"9"]>
+	| <YEAR: (["0"-"9"]){4} > 
+	| <HOUR: (["0"-"9"])* >
+}
+//Reglas para los datos generales del huracán
+TOKEN : {
+	<SIGNO: ("-")* >
+	| <OCEANO: ("AL" | "PA")>
+	| <ESPACIOS: (" ")+>
+	| <COMAS: ([","])* >
+	| <LETRAS:  (["A" - "Z", "a" - "z","-"]){3,} > 
+	| <NUMBER: (["0"-"9"])*>
+	| <TRACKEDENTRIES: (["0"-"9"]){1,3}>
+	| <PUNTOS: ".">
+    | <LAT: ("N" | "S")>
+    | <LON: ("E" | "W")>
+}
+    /*Identificadores de registro
+      C - Aproximación más cercana a una costa, no seguida de una llegada a tierra 
+      G - Génesis 
+      I - Pico de intensidad en términos de presión y viento 
+      L - Toque de tierra (centro del sistema cruzando una costa) 
+      P - Mínimo en la presión central 
+      R - Proporciona detalles adicionales sobre la intensidad del ciclón cuando se producen cambios rápidos 
+      S - Cambio de estado del sistema 
+      T - Proporciona detalles adicionales sobre la trayectoria (posición) del ciclón 
+      W - Velocidad máxima sostenida del viento
+      -------------------------------------------------------------------------------------------------------
+      Estado de sistema
+      TD - Ciclón tropical de intensidad de depresión tropical (< 34 nudos) 
+      TS - Ciclón tropical con intensidad de tormenta tropical (34-63 nudos) 
+      HU - Ciclón tropical con intensidad de huracán (> 64 nudos) 
+      EX - Ciclón extratropical (de cualquier intensidad) 
+      SD - Ciclón subtropical de intensidad de depresión subtropical (< 34 nudos) 
+      SS - Ciclón subtropical de intensidad de tormenta subtropical (> 34 nudos) 
+      LO - Baja que no es ni ciclón tropical, ni ciclón subtropical, ni ciclón extratropical (de cualquier intensidad) 
+      WV - Onda tropical (de cualquier intensidad) 
+      DB - Perturbación (de cualquier intensidad) 
+      */
+//Reglas para identificar el huracán
+TOKEN : {
+	<RECID: "C"|"G"|"I"|"L"|"P"|"R"|"S"|"T"|"W">
+	|<STATUS:"TD"|"TS"|"HU"|"EX"|"SD"|"SS"|"LO"|"WV"|"DB" >
+}
+//Columnas requeridas para los datos de los huracanes
+void columns():{}{
+	{System.out.println("ocean,numCycl,year,name,numTrcks,yearTrck,monthTrck,dayTrck,hourTrck,minutsTrck,recordId,statusSys,"
+	+"latitude,longitude,maxSustWin,minPress,34ktNE,34ktSE,34ktSW,34ktNW,50ktNE,50ktSE,50ktSW,50ktNW,64ktNE,64ktSE,64ktSW,64ktNW,radMaxWind");}
+}
+
+TOKEN: {
+	//Token para identificar el huracán
+	<oceanID: <OCEANO> <NUMBER> <COMAS>>{
+		String ocean= image.toString();
+		ocean = ocean.replace(" ", "");
+		matchedToken.image=ocean;//función matchedToken para guardar una copia de ocean y posteriormente acomodarlo
+	}
+	//Token para obtener el nombre del huracán asi como el número de ciclon para ese año
+	|<namH: <COMAS> (<ESPACIOS>)* <LETRAS> <COMAS> (<ESPACIOS>)* <TRACKEDENTRIES> <COMAS>>{//TRACKEDENTRIES: NÚMERO DE ENTRADAS
+		String name= image.toString();
+		name = name.replace(" ", "");
+		matchedToken.image=name;//función matchedToken para guardar una copia de name y posteriormente acomodarlo
+	}
+	//Token para obtener la fecha, hora y minuto del huracán
+	|<date: <YEAR> <MONTH> <DAY> <COMAS> <ESPACIOS> <HOUR> <COMAS> <ESPACIOS>>{
+		String saveDate =image.toString();
+		saveDate = saveDate.replace(" ", "");
+		matchedToken.image=saveDate;//función matchedToken para guardar una copia de saveDate y posteriormente acomodarlo
+	}
+	//Token para obtener el identificador de registro asi como el status del sistema
+	|<recordID: (<ESPACIOS> | <RECID> | <COMAS>)* <COMAS> <ESPACIOS> <STATUS> <COMAS> >{
+		String rID = image.toString();
+    	//convertir rID en una lista
+		String[] recID = rID.split(",",2);
+        //Condición que verifica si esta vació el identificador de registro, lo remplace con "N/A"
+		recID[0] = recID[0].replace(" ", "");
+		if ( recID[0].isEmpty() )
+			{
+				recID[0] = "N/A";
+				//Llenar array con el status del sistema
+			}else{recID[1] = recID[1].replace(" ","");}
+				matchedToken.image = recID[0] + "," + recID[1];//matchedToken para realizar una copia de recID
+	}
+	//Token para obtener la latitud del huracán
+	| <lat: <ESPACIOS> <NUMBER> <PUNTOS> <NUMBER> <LAT> <COMAS> > {
+		String latitude = image.toString();
+		latitude = latitude.replace(" ", "");
+		//matchedToken.image=latitude;
+	}
+	//Token para obtener la longitud del huracán
+	| <lon: <ESPACIOS> <NUMBER> <PUNTOS> <NUMBER> <LON> <COMAS>> {
+		String longitude = image.toString();
+
+		longitude = longitude.replace(" ", "");
+		//Condición que verifica si la longitud contiene las letras W o E al final para agregarlos el "-" respectivo
+		if(longitude.contains("W")){
+			longitude.replace("W","");
+			longitude ="-"+longitude;
+		}
+		longitude=longitude.replace("E","");
+		matchedToken.image=longitude;
+	}
+	//Llenar las demas columnas faltantes
+	| <FILLCOLUMNS: (<ESPACIOS> <SIGNO>) + (<SIGNO>) +( <NUMBER> <COMAS>)* >{
+		String fill = image.toString();
+		//Reemplazar los valores a -999
+		fill = fill.replace("-999","N/A");
+		matchedToken.image=fill;//matchedToken para realizar una copia de fill
+	}
+}
+
+//método que almacena datos generales del huracán, identificador,número de ciclon, año y nombre
+String saveOcean():{
+	//Token temporal a utilizar para obtener los datos generales del huracán
+	Token arrOcean;
+	//variable para almacenarlos
+	String save;
+}
+{
+	arrOcean = <oceanID>{
+		save = arrOcean.image.toString();    
+		String subString = save.substring(0,2);//subString= "AL"
+
+		String subString2 = save.substring(2,4);//subString2= "01"
+
+        String subString3 = save.substring(4,8);//subString3= "1851"
+
+		save= subString + "," + subString2 + "," + subString3 + ",";//Formato con la que se almacenarán los datos save= "AL,01,1851,"
+	}
+	arrOcean= <namH>{
+		save += arrOcean.image;//save 
+		return save;//retornando los datos
+	}
+}
+
+String saveDate():{
+	//Token temporales para la fecha, identificador de registro,latitud y longitud
+	Token tempDate,longitude,latitude,recId;
+	//Token de los datos de viento del huracán
+	Token maxSustWin,minPress,ktNE34, ktSE34,ktSW34, ktNW34, ktNE50, ktSE50, ktSW50,ktNW50, ktNE64, ktSE64,ktSW64,ktNW64, radMaxWind;
+    //Variables a utilizar para los datos de la fecha y radio maximo de viento
+	String save="",strRadMaxWind="";
+}
+{
+	tempDate = <date>{
+        //Fechas
+		String str2 = tempDate.image.toString();
+		String[] divide = str2.split(",",2);//dividiendo la fecha
+		String num1 = divide[0];
+
+        //datos de fechas
+		String num2 = num1.substring(0,4); //num2= "1851" año
+
+		String num3 = num1.substring(4,6); //num3= "06" mes
+
+		String num4 = num1.substring(6,8); //num4 ="25" día
+
+        //Horas y minutos
+		String num5 = divide[1];//obtiendo la lista que contiene la hora "0000"
+
+		String num6 = num5.substring(1,2);//num6= "00"
+
+		String num7 = num5.substring(3,4);//num7= "00"
+
+		save= num2 +","+num3+","+num4+","+num6+","+num7+",";//Formato para acomodar la fecha y hora save= "1851,06,25,00,00,"
+        
+	}
+    //obteniendo el valor del identificador de registro agregandolo a la variable save
+	recId = <recordID>{
+		save += recId;
+	}
+	//latitud
+	latitude = <lat>{//Latitud del huracán
+		//definiendo el valor de latitud a string mediante image almacenandolo en str3
+		String str3=latitude.image.toString();
+		//obteniedo la lista del latitud
+		String[] divide2 =str3.split(",");
+		//variable que establece donde se almacenará
+		String numbers =divide2[0];
+        //obteniendo la latitud de tal forma que no se agregue la letra final, en este caso N(North)
+		String numb=numbers.substring(0,5);
+		//guardando en save
+		save += numb+",";
+		}
+	longitude = <lon>	{//longitud del huracán
+		//definiendo el valor de latitud a string mediante image almacenandolo en str4
+		String str4=longitude.image.toString();
+		//Condición que verifica si la longitud contiene una W o E para quitarlos
+		if(str4.contains("W")){
+			str4=str4.replace("W","");
+		}else{
+			str4=str4.replace("E","");
+		}
+		
+		save += str4;
+		return save;//retornar valor
+		}
+}
+//método que rellena las demas columnas faltantes
+String fillColumns():{
+	//tokens temporales definidos de tal manera que unicamente se rellenen las columnas deseadas
+	Token maxSustWin,minPress,ktNE34, ktSE34,ktSW34, ktNW34, ktNE50, ktSE50, ktSW50,ktNW50, ktNE64, ktSE64,ktSW64,ktNW64, radMaxWind;
+	//variables a utilizar para almacenar
+	String save="",strRadMaxWind="";
+}{
+	maxSustWin = <FILLCOLUMNS>{
+		save += maxSustWin;
+		}// save= "80"
+		minPress = <FILLCOLUMNS>{
+			save += minPress;//save= "N/A"
+			}
+			ktNE34 = <FILLCOLUMNS>{
+			save += ktNE34;//save= "N/A"
+			}
+			ktSE34 = <FILLCOLUMNS>{
+			save += ktSE34;//save= "N/A"
+			}
+			ktSW34 = <FILLCOLUMNS>{
+			save += ktSW34;//save= "N/A"
+			}
+			ktNW34 = <FILLCOLUMNS>{
+			save += ktNW34;//save= "N/A"
+			}
+			ktNE50 = <FILLCOLUMNS>{
+			save += ktNE50;//save= "N/A"
+			}
+			ktSE50 = <FILLCOLUMNS>{
+			save += ktSE50;//save= "N/A" 
+			}
+			ktSW50 = <FILLCOLUMNS>{
+			save += ktSW50;//save= "N/A" 
+			}
+			ktNW50 = <FILLCOLUMNS>{
+			save += ktNW50;//save= "N/A" 
+			}
+			ktNE64 = <FILLCOLUMNS>{
+			save += ktNE64;//save= "N/A" 
+			}
+			ktSE64 = <FILLCOLUMNS>{
+			save += ktSE64;//save= "N/A" 
+			}
+			ktSW64 = <FILLCOLUMNS>{
+			save += ktSW64;//save= "N/A" 
+			}
+			ktNW64 = <FILLCOLUMNS>{
+			save += ktNW64;//save= "N/A" 
+			}
+			radMaxWind = <FILLCOLUMNS>{
+				strRadMaxWind = ktNW64.image.toString();
+				strRadMaxWind = strRadMaxWind.replace(",", "");
+				save += strRadMaxWind;//save= "N/A"
+				return save;//retornando valores de las demas columnas
+				}
+}
+//método que imprimirá los datos de todas las columnas
+void printAll():{String printOc, printDate,printColl;}
+{
+	(printOc=saveOcean()(printDate=saveDate()(printColl=fillColumns(){System.out.println(printOc+printDate+printColl);})+)+)+<EOF>//Token <EOF> para indicar que llegue al final de archivo
+}
+//método que ejecuta el programa
+void ejecutar(): {}
+{
+	columns() printAll()
+}
